@@ -1,0 +1,223 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FreelanceFlow | Projects</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f4f6fb;
+      color: #20283a;
+    }
+    header { background: #20283a; color: white; padding: 20px 6%; }
+    header h1 { margin: 0 0 8px; }
+    a { color: #9fc5ff; }
+    main { max-width: 900px; margin: auto; padding: 24px 16px; }
+    .panel {
+      background: white;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 14px;
+      box-shadow: 0 3px 12px #20283a0c;
+    }
+    label { display: block; margin: 14px 0 6px; font-weight: bold; }
+    input, select {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #d5dae5;
+      border-radius: 8px;
+      font-size: 16px;
+      background: white;
+    }
+    button {
+      padding: 11px 15px;
+      border: 0;
+      border-radius: 8px;
+      background: #3659d9;
+      color: white;
+      font-size: 15px;
+      cursor: pointer;
+    }
+    .submit { margin-top: 18px; width: 100%; }
+    .project {
+      border: 1px solid #e6eaf2;
+      padding: 16px;
+      border-radius: 10px;
+      margin-top: 12px;
+      overflow-wrap: anywhere;
+    }
+    .project h3 { margin: 0 0 8px; }
+    .project p { margin: 7px 0; color: #667085; }
+    .project progress { width: 100%; height: 16px; }
+    .delete { background: #c0394b; margin-top: 10px; }
+    .empty { color: #667085; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>FreelanceFlow</h1>
+    <a href="index.html">← Dashboard</a> |
+    <a href="clients.html">Clients</a>
+  </header>
+
+  <main>
+    <section class="panel">
+      <h2>Add a project</h2>
+      <form id="projectForm">
+        <label for="name">Project name *</label>
+        <input id="name" required maxlength="120"
+               placeholder="e.g. Business website">
+
+        <label for="client">Client name</label>
+        <input id="client" maxlength="100"
+               placeholder="e.g. Sarah Ben Ali">
+
+        <label for="deadline">Deadline</label>
+        <input id="deadline" type="date">
+
+        <label for="budget">Budget (TND)</label>
+        <input id="budget" type="number" min="0" step="0.01"
+               placeholder="e.g. 800">
+
+        <label for="status">Status</label>
+        <select id="status">
+          <option>Not started</option>
+          <option>In progress</option>
+          <option>Completed</option>
+          <option>On hold</option>
+        </select>
+
+        <label for="progress">Progress: <span id="progressValue">0%</span></label>
+        <input id="progress" type="range" min="0" max="100" value="0">
+
+        <button class="submit" type="submit">+ Add project</button>
+      </form>
+    </section>
+
+    <section class="panel">
+      <h2>My projects</h2>
+      <div id="projectList" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <script>
+    const storageKey = "freelanceflow_projects_v1";
+    const form = document.getElementById("projectForm");
+    const list = document.getElementById("projectList");
+    const progressInput = document.getElementById("progress");
+    const progressValue = document.getElementById("progressValue");
+
+    progressInput.addEventListener("input", () => {
+      progressValue.textContent = progressInput.value + "%";
+    });
+
+    function getProjects() {
+      try {
+        const data = JSON.parse(localStorage.getItem(storageKey) || "[]");
+        return Array.isArray(data) ? data : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function saveProjects(projects) {
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(projects));
+        return true;
+      } catch {
+        alert("Could not save projects in this browser.");
+        return false;
+      }
+    }
+
+    function renderProjects() {
+      const projects = getProjects();
+      list.replaceChildren();
+
+      if (projects.length === 0) {
+        const empty = document.createElement("p");
+        empty.className = "empty";
+        empty.textContent = "No projects yet. Add your first project above!";
+        list.appendChild(empty);
+        return;
+      }
+
+      projects.forEach(project => {
+        const card = document.createElement("article");
+        card.className = "project";
+
+        const title = document.createElement("h3");
+        title.textContent = project.name;
+        card.appendChild(title);
+
+        const details = [
+          ["Client", project.client],
+          ["Deadline", project.deadline || "Not set"],
+          ["Budget", Number(project.budget).toFixed(2) + " TND"],
+          ["Status", project.status],
+          ["Progress", project.progress + "%"]
+        ];
+
+        details.forEach(([label, value]) => {
+          const p = document.createElement("p");
+          p.textContent = label + ": " + value;
+          card.appendChild(p);
+        });
+
+        const progress = document.createElement("progress");
+        progress.max = 100;
+        progress.value = project.progress;
+        progress.setAttribute("aria-label", "Project progress");
+        card.appendChild(progress);
+
+        const remove = document.createElement("button");
+        remove.className = "delete";
+        remove.textContent = "Delete project";
+        remove.addEventListener("click", () => {
+          if (!confirm("Delete this project?")) return;
+          const updated = getProjects().filter(item => item.id !== project.id);
+          if (saveProjects(updated)) renderProjects();
+        });
+
+        card.appendChild(remove);
+        list.appendChild(card);
+      });
+    }
+
+    form.addEventListener("submit", event => {
+      event.preventDefault();
+
+      const name = document.getElementById("name").value.trim();
+      const client = document.getElementById("client").value.trim();
+      const deadline = document.getElementById("deadline").value;
+      const budgetText = document.getElementById("budget").value;
+      const budget = budgetText === "" ? 0 : Number(budgetText);
+      const status = document.getElementById("status").value;
+      let progress = Number(progressInput.value);
+
+      if (!name || !Number.isFinite(budget) || budget < 0) return;
+
+      if (status === "Completed") progress = 100;
+
+      const projects = getProjects();
+      projects.push({
+        id: Date.now().toString() + Math.random().toString(16).slice(2),
+        name, client, deadline, budget, status, progress
+      });
+
+      if (saveProjects(projects)) {
+        form.reset();
+        progressInput.value = 0;
+        progressValue.textContent = "0%";
+        renderProjects();
+      }
+    });
+
+    renderProjects();
+  </script>
+</body>
+</html>
