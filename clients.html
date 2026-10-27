@@ -1,0 +1,188 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FreelanceFlow | Clients</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f4f6fb;
+      color: #20283a;
+    }
+    header {
+      background: #20283a;
+      color: white;
+      padding: 20px 6%;
+    }
+    header h1 { margin: 0 0 8px; }
+    a { color: #9fc5ff; }
+    main { max-width: 850px; margin: auto; padding: 24px 16px; }
+    .panel {
+      background: white;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 14px;
+      box-shadow: 0 3px 12px #20283a0c;
+    }
+    label { display: block; margin: 14px 0 6px; font-weight: bold; }
+    input {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #d5dae5;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+    button {
+      padding: 11px 15px;
+      border: 0;
+      border-radius: 8px;
+      background: #3659d9;
+      color: white;
+      font-size: 15px;
+      cursor: pointer;
+    }
+    .submit { margin-top: 18px; width: 100%; }
+    .client {
+      border: 1px solid #e6eaf2;
+      padding: 15px;
+      border-radius: 10px;
+      margin-top: 12px;
+      overflow-wrap: anywhere;
+    }
+    .client h3 { margin: 0 0 8px; }
+    .client p { margin: 5px 0; color: #667085; }
+    .delete { background: #c0394b; margin-top: 10px; }
+    .empty { color: #667085; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>FreelanceFlow</h1>
+    <a href="index.html">← Back to dashboard</a>
+  </header>
+
+  <main>
+    <section class="panel">
+      <h2>Add a client</h2>
+      <form id="clientForm">
+        <label for="name">Client name *</label>
+        <input id="name" required maxlength="100" placeholder="e.g. Sarah Ben Ali">
+
+        <label for="email">Email address</label>
+        <input id="email" type="email" maxlength="150" placeholder="sarah@example.com">
+
+        <label for="company">Company</label>
+        <input id="company" maxlength="100" placeholder="Company name">
+
+        <button class="submit" type="submit">+ Add client</button>
+      </form>
+    </section>
+
+    <section class="panel">
+      <h2>My clients</h2>
+      <div id="clientList" aria-live="polite">
+        <p class="empty">Loading clients...</p>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const storageKey = "freelanceflow_clients_v1";
+    const form = document.getElementById("clientForm");
+    const list = document.getElementById("clientList");
+
+    function getClients() {
+      try {
+        const data = JSON.parse(localStorage.getItem(storageKey) || "[]");
+        return Array.isArray(data) ? data : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function saveClients(clients) {
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(clients));
+        return true;
+      } catch {
+        alert("Could not save clients in this browser.");
+        return false;
+      }
+    }
+
+    function renderClients() {
+      const clients = getClients();
+      list.replaceChildren();
+
+      if (clients.length === 0) {
+        const empty = document.createElement("p");
+        empty.className = "empty";
+        empty.textContent = "No clients yet. Add your first client above!";
+        list.appendChild(empty);
+        return;
+      }
+
+      clients.forEach(client => {
+        const card = document.createElement("article");
+        card.className = "client";
+
+        const title = document.createElement("h3");
+        title.textContent = client.name;
+        card.appendChild(title);
+
+        [
+          ["Email", client.email],
+          ["Company", client.company]
+        ].forEach(([label, value]) => {
+          if (value) {
+            const p = document.createElement("p");
+            p.textContent = label + ": " + value;
+            card.appendChild(p);
+          }
+        });
+
+        const remove = document.createElement("button");
+        remove.className = "delete";
+        remove.textContent = "Delete client";
+        remove.addEventListener("click", () => {
+          if (!confirm("Delete this client?")) return;
+          const updated = getClients().filter(item => item.id !== client.id);
+          if (saveClients(updated)) renderClients();
+        });
+
+        card.appendChild(remove);
+        list.appendChild(card);
+      });
+    }
+
+    form.addEventListener("submit", event => {
+      event.preventDefault();
+
+      const name = document.getElementById("name").value.trim();
+      const email = document.getElementById("email").value.trim();
+      const company = document.getElementById("company").value.trim();
+
+      if (!name) return;
+
+      const clients = getClients();
+      clients.push({
+        id: Date.now().toString() + Math.random().toString(16).slice(2),
+        name,
+        email,
+        company
+      });
+
+      if (saveClients(clients)) {
+        form.reset();
+        renderClients();
+      }
+    });
+
+    renderClients();
+  </script>
+</body>
+</html>
